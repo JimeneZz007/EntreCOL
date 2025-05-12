@@ -1,0 +1,8 @@
+{% extends 'auth/auth_layout.html' %}
+
+{% block content %}
+<h2>Tu Perfil</h2>
+<p>Bienvenid@, <strong>{{ username }}</strong>!</p>
+<a href="{{ url_for('inicio') }}" class="btn btn-primary">Volver al Inicio</a>
+<a href="{{ url_for('cerrar_sesion') }}" class="btn btn-danger">Cerrar Sesion</a>
+{% endblock %}

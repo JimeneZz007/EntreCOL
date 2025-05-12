@@ -1,0 +1,12 @@
+{% extends 'auth/auth_layout.html' %}
+
+{% block content %}
+<h2>Bienvenido al Portal del Empleado</h2>
+<p>Hola, <strong>{{ username }}</strong>. Aquí podrás consultar tu información personal, nómina y otras funciones.</p>
+
+<div class="mt-4">
+
+    <a href="{{ url_for('login') }}" class="btn btn-primary">Inicio</a>
+    <a href="{{ url_for('cerrar_sesion') }}" class="btn btn-danger">Cerrar Sesión</a>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .nomina-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .nomina-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .nomina-header h1 {
+            color: #3274d6;
+        }
+        .nomina-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .nomina-table th, .nomina-table td {
+            border: 1px solid #dee0e4;
+            padding: 10px;
+            text-align: left;
+        }
+        .nomina-table th {
+            background-color: #f4f6f9;
+            color: #5b6574;
+        }
+        .alert {
+            text-align: center;
+            padding: 10px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="nomina-container">
+        <div class="nomina-header">
+            <h1>Detalles de Nómina</h1>
+        </div>
+        {% if datos %}
+        <table class="nomina-table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cargo</th>
+                    <th>Fecha de ingreso</th>
+                    <th>EPS</th>
+                    <th>ARL</th>
+                    <th>Fondo de pensiones</th>
+                    <th>Sueldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ datos.codigo }}</td>
+                    <td>{{ datos.nombre }}</td>
+                    <td>{{ datos.cargo }}</td>
+                    <td>{{ datos.fecha_ingreso }}</td>
+                    <td>{{ datos.eps }}</td>
+                    <td>{{ datos.arl }}</td>
+                    <td>{{ datos.fondo_pensiones }}</td>
+                    <td>${{ datos.sueldo }}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert">
+            No se encontraron datos de nómina.
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
