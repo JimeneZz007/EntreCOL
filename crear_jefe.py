@@ -13,7 +13,6 @@ cursor = db.cursor()
 
 # Datos del usuario jefe
 nombre_usuario = 'Cristiano Ronaldo'
-codigo = '1'
 contraseña = '1234'
 role = 'jefe'
 
@@ -23,8 +22,8 @@ password_hash = generate_password_hash(contraseña)
 # Insertar en la tabla usuarios
 try:
     cursor.execute(
-        "INSERT INTO usuarios (nombre_usuario, codigo, contraseña, role) VALUES (%s, %s, %s, %s)",
-        (nombre_usuario, codigo, password_hash, role)
+        "INSERT INTO usuarios (nombre_usuario, contraseña, role) VALUES (%s, %s, %s)",
+        (nombre_usuario, password_hash, role)
     )
     db.commit()
     print("Usuario jefe creado exitosamente.")
