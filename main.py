@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash,send_file
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 import MySQLdb.cursors
 import re
 import os
 from dotenv import load_dotenv
-from flask import send_file
 from reportlab.pdfgen import canvas
 from io import BytesIO
+from pymongo import MongoClient
 
 
 # Cargar variables de entorno
@@ -21,6 +21,12 @@ app.config['MYSQL_HOST'] = '192.168.56.101'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'sistemas2024'
 app.config['MYSQL_DB'] = 'EntreCOL+'
+
+# Configuración de la base de datos(Mongo)
+client = MongoClient("mongodb://192.168.56.101:27017/")  
+db = client["entrecol_multimedia"] 
+peliculas_collection = db["peliculas"]
+libros_collection = db["libros"]
 
 # Inicializar MySQL
 mysql = MySQL(app)
@@ -320,6 +326,16 @@ def descargar_nomina():
 def cerrar_sesion():
     session.clear()
     return redirect(url_for('login'))
+
+@app.route('/peliculas')
+def mostrar_peliculas():
+    peliculas = list(peliculas_collection.find())
+    return render_template('inicio/peliculas.html', peliculas=peliculas)
+
+@app.route('/libros')
+def mostrar_libros():
+    libros = list(libros_collection.find())
+    return render_template('inicio/libros.html', libros=libros)
 
 
 # Ejecutar la app

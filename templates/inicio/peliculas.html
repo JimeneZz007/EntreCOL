@@ -7,6 +7,26 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Películas</h1>
+    <div class="container mt-4">
+        <h1 class="mb-4">Películas</h1>
+        {% if peliculas %}
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for peli in peliculas %}
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ peli.titulo }}</h5>
+                                <p class="card-text">{{ peli.descripcion }}</p>
+                                <p class="card-text"><strong>Género:</strong> {{ peli.genero }}</p>
+                                <p class="card-text"><strong>Año:</strong> {{ peli.anio }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No se encontraron películas en la base de datos.</p>
+        {% endif %}
+    </div>
 </body>
 </html>
