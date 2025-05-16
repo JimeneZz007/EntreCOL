@@ -332,6 +332,10 @@ def mostrar_peliculas():
     peliculas = list(peliculas_collection.find())
     return render_template('inicio/peliculas.html', peliculas=peliculas)
 
+@app.route('/libros')
+def mostrar_libros():
+    libros = list(libros_collection.find())
+    return render_template('inicio/libros.html', libros=libros)
 
 # Ejecutar la app
 if __name__ == '__main__':
