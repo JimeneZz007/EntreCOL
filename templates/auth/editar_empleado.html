@@ -1,0 +1,41 @@
+{% extends 'home/layout.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Editar al Empleado: {{ empleado.nombre }}</h2>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label for="codCargo" class="form-label">Cargo</label>
+      <select name="codCargo" id="codCargo" class="form-select" required>
+        {% for c in cargos %}
+          <option value="{{ c.codCargo }}" data-dependencia="{{ c.dependencia }}"
+            {% if c.codCargo == empleado.codCargo %} selected {% endif %}>
+            {{ c.cargo }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Dependencia</label>
+      <input type="text" id="dependencia" class="form-control" readonly value="{{ empleado.dependencia }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+    <a href="{{ url_for('inicio') }}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+
+<script>
+  // Cambiar dependencia al seleccionar otro cargo
+  const codCargoSelect = document.getElementById('codCargo');
+  const dependenciaInput = document.getElementById('dependencia');
+
+  codCargoSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const dependencia = selectedOption.getAttribute('data-dependencia');
+    dependenciaInput.value = dependencia;
+  });
+</script>
+{% endblock %}
