@@ -1,0 +1,146 @@
+{% extends 'home/layout.html' %}
+{% block content %}
+<div class="container pb-5">
+  <h2 class="mb-4">Registrar Nuevo Empleado</h2>
+  <form method="POST" id="registroForm">
+    <!-- Datos del Usuario -->
+    <h4 class="mb-3">Datos del Usuario</h4>
+    <div class="form-group mb-3">
+      <label>Nombre de Usuario</label>
+      <input type="text" name="nombre_usuario" class="form-control" required>
+    </div>
+    <div class="form-group mb-3">
+      <label>Contraseña</label>
+      <input type="password" name="contraseña" class="form-control" required>
+    </div>
+    <div class="form-group mb-4">
+      <label for="rol">Rol del empleado</label>
+      <select name="rol" id="rol" class="form-control" required>
+        <option value="empleado">Empleado</option>
+        <option value="jefe">Jefe</option>
+      </select>
+    </div>
+
+    <!-- Datos del Empleado -->
+    <h4 class="mb-3">Datos del Empleado</h4>
+    <div class="form-group mb-3">
+      <label>Nombre Completo</label>
+      <input type="text" name="nombre_empleado" class="form-control" required>
+    </div>
+    <div class="form-group mb-4">
+      <label>Fecha de Ingreso</label>
+      <input type="date" name="fecha_ingreso" id="fecha_ingreso" class="form-control" required>
+    </div>
+
+    <!-- Datos del Cargo -->
+    <h4 class="mb-3">Datos del Cargo</h4>
+    <div class="form-group mb-3">
+      <label>Nombre del Cargo</label>
+      <select name="nombre_cargo" class="form-control" required>
+        <option value="">Seleccione un cargo</option>
+        <option>Ingeniero de Desarrollo</option>
+        <option>Auxiliar especializado</option>
+        <option>Director de Impuestos</option>
+        <option>Gerente de ventas</option>
+        <option>Director de Facturación</option>
+        <option>Ingeniero de Soporte</option>
+        <option>DBA</option>
+        <option>Auditor interno</option>
+        <option>Director de presupuestos</option>
+        <option>Líder de infraestructura</option>
+        <option>Director de cartera</option>
+        <option>Líder de QA</option>
+        <option>Director de costos</option>
+        <option>Director de ventas</option>
+        <option>Administrador</option>
+        <option>electrónico</option>
+      </select>
+    </div>
+    <div class="form-group mb-4">
+      <label>Dependencia</label>
+      <select name="nombre_dependencia" class="form-control" required>
+        <option value="">Seleccione una dependencia</option>
+        <option>Tecnología</option>
+        <option>Facturación</option>
+        <option>Contabilidad</option>
+        <option>Comercial</option>
+        <option>Gerencia</option>
+      </select>
+    </div>
+
+    <!-- Datos de Seguridad Social -->
+    <h4 class="mb-3">Datos de Seguridad Social</h4>
+    <div class="form-group mb-3">
+      <label>EPS</label>
+      <input type="text" name="eps" class="form-control" required>
+    </div>
+    <div class="form-group mb-3">
+      <label>ARL</label>
+      <input type="text" name="arl" class="form-control" required>
+    </div>
+    <div class="form-group mb-4">
+      <label>Pensión</label>
+      <input type="text" name="pension" class="form-control" required>
+    </div>
+
+    <!-- Datos de Nómina -->
+    <h4 class="mb-3">Datos de Nómina</h4>
+    <div class="form-group mb-3">
+      <label>Bonificación</label>
+      <input type="number" step="0.01" min="0" name="bonificacion" id="bonificacion" class="form-control" required value="0">
+    </div>
+    <div class="form-group mb-3">
+      <label>Transporte</label>
+      <input type="number" step="0.01" min="0" name="transporte" id="transporte" class="form-control" required value="0">
+    </div>
+    <div class="form-group mb-3">
+      <label>Salario</label>
+      <input type="number" step="0.01" min="0" name="salario" id="salario" class="form-control" required value="0">
+    </div>
+    <div class="form-group mb-3">
+      <label>Días Trabajados</label>
+      <input type="number" min="0" max="31" name="dias_trabajados" id="dias_trabajados" class="form-control" required value="0">
+    </div>
+    <div class="form-group mb-4">
+      <label>Salario Total</label>
+      <input type="number" step="0.01" min="0" id="salario_total" class="form-control" readonly>
+    </div>
+
+    <!-- Campo oculto para enviar la fecha de nómina igual a la fecha de ingreso -->
+    <input type="hidden" name="fecha_nomina" id="fecha_nomina">
+
+    <button type="submit" class="btn btn-primary">Registrar Empleado</button>
+  </form>
+</div>
+
+<script>
+  // Función para actualizar salario total automáticamente
+  function actualizarSalarioTotal() {
+    const bonificacion = parseFloat(document.getElementById('bonificacion').value) || 0;
+    const transporte = parseFloat(document.getElementById('transporte').value) || 0;
+    const salario = parseFloat(document.getElementById('salario').value) || 0;
+
+    const total = bonificacion + transporte + salario;
+    document.getElementById('salario_total').value = total.toFixed(2);
+  }
+
+  // Vincular los inputs para que actualicen el total al cambiar
+  document.getElementById('bonificacion').addEventListener('input', actualizarSalarioTotal);
+  document.getElementById('transporte').addEventListener('input', actualizarSalarioTotal);
+  document.getElementById('salario').addEventListener('input', actualizarSalarioTotal);
+
+  // Actualizar el campo fecha_nomina al cambiar la fecha de ingreso
+  document.getElementById('fecha_ingreso').addEventListener('change', function() {
+    document.getElementById('fecha_nomina').value = this.value;
+  });
+
+  // Al cargar la página, inicializar fecha_nomina con fecha_ingreso si ya tiene valor
+  window.addEventListener('DOMContentLoaded', () => {
+    const fechaIngresoInput = document.getElementById('fecha_ingreso');
+    if(fechaIngresoInput.value) {
+      document.getElementById('fecha_nomina').value = fechaIngresoInput.value;
+    }
+    actualizarSalarioTotal();
+  });
+</script>
+{% endblock %}

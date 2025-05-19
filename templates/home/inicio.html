@@ -6,15 +6,132 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container pb-5">
   <h1>Bienvenido, {{ username }}!</h1>
-  <p>Esta es tu página de inicio.</p>
+  <p>Esta es tu página de inicio, aquí podrás ver la información de tus Empleados.</p>
 
-  <!-- Botón para registrar un nuevo usuario -->
-  <a href="{{ url_for('registrar') }}" class="btn btn-primary mt-3">Registrar Nuevo Empleado</a>
-
-  <!-- Mensajes flash -->
   {% include 'includes/alert.html' %}
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <select id="empleadoSelect" class="form-select" style="max-width: 1000px;">
+      <option value="" selected disabled>Selecciona un empleado</option>
+      {% for emp in empleados %}
+        <option value="{{ emp.codEmp }}">{{ emp.nombre }}</option>
+      {% endfor %}
+    </select>
+
+    <a href="{{ url_for('registrar_empleado') }}" class="btn btn-success">Registrar Nuevo Empleado</a>
+  </div>
+
+  <!-- Contenedor vertical para empleado y nómina -->
+  <div>
+    <!-- Info Empleado -->
+    <div id="infoEmpleado" class="border rounded p-3 mb-4" style="min-height: 250px; display:none;">
+      <!-- Aquí se cargarán los datos -->
+    </div>
+
+    <!-- Nómina Empleado -->
+    <div id="nominaEmpleado" class="border rounded p-3" style="min-height: 250px; display:none; overflow-x:auto;">
+      <h5 class="mb-3">Nómina del empleado</h5>
+      <table class="table table-sm table-striped">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Fecha Nómina</th>
+            <th>Bonificación</th>
+            <th>Transporte</th>
+            <th>Salario</th>
+            <th>Días Trabajados</th>
+            <th>Salario Total</th>
+          </tr>
+        </thead>
+        <tbody id="nominaBody">
+          <!-- Datos nómina se insertan aquí -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const empleadoSelect = document.getElementById('empleadoSelect');
+    const infoCont = document.getElementById('infoEmpleado');
+    const nominaCont = document.getElementById('nominaEmpleado');
+    const nominaBody = document.getElementById('nominaBody');
+
+    empleadoSelect.addEventListener('change', function () {
+      const codEmp = this.value;
+
+      if (!codEmp) {
+        infoCont.style.display = 'none';
+        infoCont.innerHTML = '';
+        nominaCont.style.display = 'none';
+        nominaBody.innerHTML = '';
+        return;
+      }
+
+      // Obtener datos empleado
+      fetch(`/empleado_info/${codEmp}`)
+        .then(response => {
+          if (!response.ok) throw new Error('Empleado no encontrado');
+          return response.json();
+        })
+        .then(data => {
+          infoCont.style.display = 'block';
+          infoCont.innerHTML = `
+            <h5 class="mb-3">Datos del empleado</h5>
+            <p><strong>Código Empleado:</strong> ${data.codEmp}</p>
+            <p><strong>Nombre:</strong> ${data.nombre}</p>
+            <p><strong>Cargo:</strong> ${data.cargo}</p>
+            <p><strong>Dependencia:</strong> ${data.dependencia}</p>
+            <p><strong>Salud:</strong> ${data.salud}</p>
+            <p><strong>Pensión:</strong> ${data.pension}</p>
+            <p><strong>ARL:</strong> ${data.arl}</p>
+            <p><strong>Fecha de Ingreso:</strong> ${data.fechaIngreso}</p>
+            <a href="/editar_empleado/${data.codEmp}" class="btn btn-primary mt-3">Editar Empleado</a>
+          `;
+        })
+        .catch(error => {
+          infoCont.style.display = 'block';
+          infoCont.innerHTML = `<p class="text-danger">${error.message}</p>`;
+        });
+
+      // Obtener datos nómina
+      fetch(`/nomina_empleado/${codEmp}`)
+        .then(response => {
+          if (!response.ok) throw new Error('Nómina no encontrada');
+          return response.json();
+        })
+        .then(data => {
+          nominaCont.style.display = 'block';
+          nominaBody.innerHTML = '';
+
+          if (data.length === 0) {
+            nominaBody.innerHTML = `<tr><td colspan="8" class="text-center">No hay datos de nómina para este empleado.</td></tr>`;
+            return;
+          }
+
+          data.forEach(nomina => {
+            nominaBody.innerHTML += `
+              <tr>
+                <td>${nomina.codEmp}</td>
+                <td>${nomina.nombre}</td>
+                <td>${nomina.fechaNomina}</td>
+                <td>${nomina.bonificacion}</td>
+                <td>${nomina.transporte}</td>
+                <td>${nomina.salario}</td>
+                <td>${nomina.diasTrabajados}</td>
+                <td>${nomina.salario_total}</td>
+
+              </tr>
+            `;
+          });
+        })
+        .catch(error => {
+          nominaCont.style.display = 'block';
+          nominaBody.innerHTML = `<tr><td colspan="8" class="text-danger">${error.message}</td></tr>`;
+        });
+    });
+  </script>
 </div>
 {% endblock %}
-

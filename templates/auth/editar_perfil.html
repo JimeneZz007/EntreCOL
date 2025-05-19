@@ -1,0 +1,40 @@
+{% extends 'auth/auth_layout.html' %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+    <a class="navbar-brand" href="{{ url_for('bienvenido') }}">EntreCOL+</a>
+    <div class="ms-auto"></div>
+</nav>
+
+<div class="bg-light py-4 px-5 mb-4 rounded shadow-sm">
+  <h1 class="display-5 fw-bold text-dark">Editar Perfil</h1>
+  <p class="lead text-muted">Aquí puedes editar tu información personal, <strong>{{ perfil['nombre_usuario'] }}</strong>.</p>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <form method="POST">
+        <!-- Campo de nombre de empleado -->
+        <div class="mb-3">
+          <label for="nombre_empleado" class="form-label">Nombre del Empleado</label>
+          <input type="text" class="form-control" id="nombre_empleado" name="nombre_empleado" value="{{ perfil['nombre_empleado'] }}" required>
+        </div>
+
+        <!-- Campo de fecha de ingreso -->
+        <div class="mb-3">
+          <label for="fecha_ingreso" class="form-label">Fecha de Ingreso</label>
+          <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso" value="{{ perfil['fechaIngreso'] }}" required>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          <a href="{{ url_for('perfil') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -9,7 +9,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
        <a class="navbar-brand" href="{{ url_for('bienvenido') }}">EntreCOL+</a>
         <div class="ms-auto">
-            <span class="text-white me-3">Registrado como {{ session['username'] }}</span>
+            <span class="text-white me-3">Registrado como {{username }}</span>
             <a href="{{ url_for('perfil') }}" class="btn btn-outline-light btn-sm">Tu Perfil</a>
             <a href="{{url_for('cerrar_sesion') }}" class="btn btn-outline-danger btn-sm ms-2">Cerrar Sesion</a>
         </div>
