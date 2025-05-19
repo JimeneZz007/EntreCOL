@@ -1,0 +1,30 @@
+{% extends 'auth/auth_layout.html' %}
+
+{% block content %}
+<h2>Login</h2>
+
+{# Bloque para mostrar mensajes flash #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="POST">
+    <div class="mb-3">
+        <label for="nombre_usuario" class="form-label">Nombre de Usuario</label>
+        <input type="text" name="nombre_usuario" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label for="contraseña" class="form-label">Contraseña</label>
+        <input type="password" name="contraseña" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+</form>
+{% endblock %}
+
