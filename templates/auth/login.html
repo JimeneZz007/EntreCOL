@@ -1,6 +1,12 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 mb-4">
+  <a class="navbar-brand" href="{{ url_for('bienvenido') }}">EntreCOL+</a>
+  <div class="ms-auto"></div>
+</nav>
+
 {% extends 'auth/auth_layout.html' %}
 
 {% block content %}
+
 <h2>Login</h2>
 
 {# Bloque para mostrar mensajes flash #}
@@ -15,14 +21,14 @@
   {% endif %}
 {% endwith %}
 
-<form method="POST">
+<form method="POST" novalidate>
     <div class="mb-3">
         <label for="nombre_usuario" class="form-label">Nombre de Usuario</label>
-        <input type="text" name="nombre_usuario" class="form-control" required>
+        <input type="text" id="nombre_usuario" name="nombre_usuario" class="form-control" required>
     </div>
     <div class="mb-3">
         <label for="contraseña" class="form-label">Contraseña</label>
-        <input type="password" name="contraseña" class="form-control" required>
+        <input type="password" id="contraseña" name="contraseña" class="form-control" required>
     </div>
     <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
 </form>

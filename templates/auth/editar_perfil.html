@@ -15,19 +15,52 @@
   <div class="row">
     <div class="col-md-8 offset-md-2">
       <form method="POST">
-        <!-- Campo de nombre de empleado -->
+        <!-- Nombre empleado -->
         <div class="mb-3">
           <label for="nombre_empleado" class="form-label">Nombre del Empleado</label>
           <input type="text" class="form-control" id="nombre_empleado" name="nombre_empleado" value="{{ perfil['nombre_empleado'] }}" required>
         </div>
 
-        <!-- Campo de fecha de ingreso -->
+        <!-- Fecha ingreso -->
         <div class="mb-3">
           <label for="fecha_ingreso" class="form-label">Fecha de Ingreso</label>
-          <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso" value="{{ perfil['fechaIngreso'] }}" required>
+          <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso" value="{{ perfil['fechaIngreso'] | string }}" required>
         </div>
 
-        <!-- Botones de acción -->
+        <!-- EPS -->
+        <div class="mb-3">
+          <label for="eps_id" class="form-label">EPS</label>
+          <select class="form-select" id="eps_id" name="eps_id" required>
+            <option value="" disabled>Seleccione EPS</option>
+            {% for eps in lista_eps %}
+              <option value="{{ eps.id }}" {% if eps.id == perfil['eps_id'] %}selected{% endif %}>{{ eps.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- ARL -->
+        <div class="mb-3">
+          <label for="arl_id" class="form-label">ARL</label>
+          <select class="form-select" id="arl_id" name="arl_id" required>
+            <option value="" disabled>Seleccione ARL</option>
+            {% for arl in lista_arl %}
+              <option value="{{ arl.id }}" {% if arl.id == perfil['arl_id'] %}selected{% endif %}>{{ arl.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Pensión -->
+        <div class="mb-3">
+          <label for="pension_id" class="form-label">Pensión</label>
+          <select class="form-select" id="pension_id" name="pension_id" required>
+            <option value="" disabled>Seleccione Pensión</option>
+            {% for pension in lista_pension %}
+              <option value="{{ pension.id }}" {% if pension.id == perfil['pension_id'] %}selected{% endif %}>{{ pension.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Botones -->
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Guardar Cambios</button>
           <a href="{{ url_for('perfil') }}" class="btn btn-secondary">Cancelar</a>

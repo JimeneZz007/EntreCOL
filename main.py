@@ -19,7 +19,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'fallback-secret-key')
 
-
 app.config['MYSQL_HOST'] = '192.168.56.101'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'sistemas2024'
@@ -37,11 +36,6 @@ mysql = MySQL(app)
 @app.route('/')
 def bienvenido():
     return render_template('inicio/index.html')
-
-# Página para explorar (de momento vacía)
-@app.route('/bienvenido/')
-def explore():
-    return render_template('inicio/peliculas.html')
 
 # Pagina de inicio de sesion
 @app.route('/iniciar_sesion/', methods=['GET', 'POST'])
@@ -69,6 +63,12 @@ def login():
 
     return render_template('auth/login.html', title="Inicia Sesión")
 
+# Ruta para cerrar sesión
+@app.route('/cerrar_sesion')
+def cerrar_sesion():
+    session.clear()
+    return redirect(url_for('login'))
+
 # Ruta de inicio
 @app.route('/inicio')
 def inicio():
@@ -90,41 +90,49 @@ def perfil():
             SELECT 
                 u.nombre_usuario, u.role,
                 e.nombre AS nombre_empleado,
-                fechaIngreso,
+                DATE_FORMAT(e.fechaIngreso, '%%Y-%%m-%%d') AS fechaIngreso,
                 c.nombre AS nombre_cargo,
                 d.nombre AS nombre_dependencia,
-                s.eps, s.arl, s.pension
+                eps.nombre AS eps,
+                arl.nombre AS arl,
+                pension.nombre AS pension
             FROM 
                 usuarios u
-            JOIN 
-                empleado e ON u.codCreden = e.codCreden
-            JOIN 
-                cargo c ON e.codCargo = c.codCargo
-            JOIN 
-                dependencia d ON c.codDep  = d.codDep
-            JOIN
-                seguridadSocial s ON e.codSeg = s.codSeg
-            WHERE 
-                u.codCreden = %s
+            JOIN empleado e ON u.codCreden = e.codCreden
+            JOIN cargo c ON e.codCargo = c.codCargo
+            JOIN dependencia d ON c.codDep = d.codDep
+            JOIN seguridadSocial s ON e.codSeg = s.codSeg
+            LEFT JOIN eps ON s.eps_id = eps.id
+            LEFT JOIN arl ON s.arl_id = arl.id
+            LEFT JOIN pension ON s.pension_id = pension.id
+            WHERE u.codCreden = %s
         """, [session['codCreden']])
         perfil = cursor.fetchone()
+        cursor.close()
         return render_template('auth/perfil.html', perfil=perfil, title="Tu Perfil")
     return redirect(url_for('login'))
+
 
 # Ruta para editar el perfil
 @app.route('/editar_perfil', methods=['GET', 'POST'])
 def editar_perfil():
     if 'loggedin' in session and session['role'] == 'jefe':
-        # Obtener los datos actuales del perfil
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+        # Obtener listas para los selects
+        cursor.execute("SELECT codSeg, eps_id, arl_id, pension_id FROM seguridadSocial")
+        lista_seguridad = cursor.fetchall()
+
+        # Obtener datos actuales del perfil
         cursor.execute("""
             SELECT 
                 u.nombre_usuario, u.role,
                 e.nombre AS nombre_empleado,
-                fechaIngreso,
+                e.fechaIngreso,
                 c.nombre AS nombre_cargo,
                 d.nombre AS nombre_dependencia,
-                s.eps, s.arl, s.pension
+                s.eps_id, s.arl_id, s.pension_id,
+                e.codSeg
             FROM 
                 usuarios u
             JOIN 
@@ -140,11 +148,14 @@ def editar_perfil():
         """, [session['codCreden']])
         perfil = cursor.fetchone()
 
-        # Si se envían los datos del formulario, actualizar la base de datos
         if request.method == 'POST':
             nombre_empleado = request.form['nombre_empleado']
             fecha_ingreso = request.form['fecha_ingreso']
+            eps_id = request.form['eps_id']
+            arl_id = request.form['arl_id']
+            pension_id = request.form['pension_id']
 
+            # Actualizar nombre y fecha en empleado
             cursor.execute("""
                 UPDATE empleado SET 
                     nombre = %s, 
@@ -152,12 +163,51 @@ def editar_perfil():
                 WHERE codCreden = %s
             """, (nombre_empleado, fecha_ingreso, session['codCreden']))
 
+            # Buscar codSeg con la combinación seleccionada
+            cursor.execute("""
+                SELECT codSeg FROM seguridadSocial
+                WHERE eps_id = %s AND arl_id = %s AND pension_id = %s
+            """, (eps_id, arl_id, pension_id))
+            resultado = cursor.fetchone()
+
+            if resultado:
+                nuevo_codSeg = resultado['codSeg']
+
+                # Actualizar empleado con el nuevo codSeg
+                cursor.execute("""
+                    UPDATE empleado SET codSeg = %s
+                    WHERE codCreden = %s
+                """, (nuevo_codSeg, session['codCreden']))
+            else:
+                flash("La combinación de EPS, ARL y Pensión no existe en seguridad social.", "danger")
+                return redirect(url_for('editar_perfil'))
+
             mysql.connection.commit()
             flash("Perfil actualizado exitosamente!", "success")
             return redirect(url_for('perfil'))
 
-        return render_template('auth/editar_perfil.html', perfil=perfil, title="Editar Perfil")
+        # También debes obtener listas de eps, arl, pension para los selects (con nombres y ids)
+        cursor.execute("SELECT id, nombre FROM eps")
+        lista_eps = cursor.fetchall()
+
+        cursor.execute("SELECT id, nombre FROM arl")
+        lista_arl = cursor.fetchall()
+
+        cursor.execute("SELECT id, nombre FROM pension")
+        lista_pension = cursor.fetchall()
+
+        return render_template(
+            'auth/editar_perfil.html', 
+            perfil=perfil, 
+            lista_eps=lista_eps,
+            lista_arl=lista_arl,
+            lista_pension=lista_pension,
+            title="Editar Perfil"
+        )
     return redirect(url_for('login'))
+
+
+
 
 # index usuarios
 @app.route('/empleado_info/<int:codEmp>')
@@ -169,23 +219,28 @@ def empleado_info(codEmp):
             e.nombre,
             c.nombre AS cargo,
             d.nombre AS dependencia,
-            s.eps AS salud,      -- Aquí cambio salud por eps
-            s.pension,
-            s.arl,
+            eps.nombre AS salud,
+            pension.nombre AS pension,
+            arl.nombre AS arl,
             DATE_FORMAT(e.fechaIngreso, '%%Y-%%m-%%d') as fechaIngreso
         FROM empleado e
         LEFT JOIN cargo c ON e.codCargo = c.codCargo
         LEFT JOIN dependencia d ON c.codDep = d.codDep
-        LEFT JOIN seguridadSocial s ON e.codSeg = s.codSeg
+        LEFT JOIN seguridadSocial ss ON e.codSeg = ss.codSeg
+        LEFT JOIN eps ON ss.eps_id = eps.id
+        LEFT JOIN pension ON ss.pension_id = pension.id
+        LEFT JOIN arl ON ss.arl_id = arl.id
         WHERE e.codEmp = %s
     """, (codEmp,))
+    
     empleado = cursor.fetchone()
     cursor.close()
 
     if empleado:
-        return jsonify(empleado)  # Dict que se convierte a JSON
+        return jsonify(empleado)
     else:
         return {}, 404
+
 
 # Pagina de editar empleados
 @app.route('/editar_empleado/<int:codEmp>', methods=['GET', 'POST'])
@@ -238,6 +293,21 @@ def registrar_empleado():
 
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
+    # Obtener EPS y Pensiones existentes en la base
+    cursor.execute("SELECT id, nombre FROM eps")  # Asegúrate que la tabla se llama 'eps' y tiene columnas id y nombre
+    eps_list = cursor.fetchall()
+
+    cursor.execute("SELECT id, nombre FROM pension")
+    pension_list = cursor.fetchall()
+
+    # Para ARL fija "Positiva", obtener su id
+    cursor.execute("SELECT id FROM arl WHERE nombre = %s", ("Positiva",))
+    arl_row = cursor.fetchone()
+    if not arl_row:
+        flash("La ARL 'Positiva' no está configurada en la base de datos", "danger")
+        return redirect(url_for('inicio'))
+    arl_id = arl_row['id']
+
     if request.method == 'POST':
         # Datos de usuarios
         nombre_usuario = request.form['nombre_usuario']
@@ -252,10 +322,10 @@ def registrar_empleado():
         nombre_cargo = request.form['nombre_cargo']
         nombre_dependencia = request.form['nombre_dependencia']
 
-        # Seguridad Social
-        eps = request.form['eps']
-        arl = request.form['arl']
-        pension = request.form['pension']
+        # Seguridad Social (se elige EPS y Pensión, ARL fijo)
+        eps_id = request.form['eps']
+        pension_id = request.form['pension']
+        arl_id = arl_id  # siempre Positiva
 
         # Nómina
         bonificacion = float(request.form['bonificacion'])
@@ -264,7 +334,7 @@ def registrar_empleado():
         dias_trabajados = int(request.form['dias_trabajados'])
         fecha_nomina = request.form['fecha_nomina']  # misma que fecha_ingreso
 
-        # 1. Insertar o encontrar Dependencia
+        # Insertar o encontrar Dependencia
         cursor.execute("SELECT codDep FROM dependencia WHERE nombre = %s", (nombre_dependencia,))
         dependencia = cursor.fetchone()
         if not dependencia:
@@ -274,7 +344,7 @@ def registrar_empleado():
         else:
             codDep = dependencia['codDep']
 
-        # 2. Insertar o encontrar Cargo
+        # Insertar o encontrar Cargo
         cursor.execute("SELECT codCargo FROM cargo WHERE nombre = %s AND codDep = %s", (nombre_cargo, codDep))
         cargo = cursor.fetchone()
         if not cargo:
@@ -284,25 +354,26 @@ def registrar_empleado():
         else:
             codCargo = cargo['codCargo']
 
-        # 3. Insertar Seguridad Social
-        cursor.execute("INSERT INTO seguridadSocial (eps, arl, pension) VALUES (%s, %s, %s)", (eps, arl, pension))
+        # Insertar Seguridad Social usando ids seleccionados
+        cursor.execute("INSERT INTO seguridadSocial (eps_id, arl_id, pension_id) VALUES (%s, %s, %s)",
+                       (eps_id, arl_id, pension_id))
         mysql.connection.commit()
         codSeg = cursor.lastrowid
 
-        # 4. Insertar Usuario con rol seleccionado
+        # Insertar Usuario con rol seleccionado
         cursor.execute("INSERT INTO usuarios (nombre_usuario, contraseña, role) VALUES (%s, %s, %s)",
                        (nombre_usuario, contraseña, rol))
         mysql.connection.commit()
         codCreden = cursor.lastrowid
 
-        # 5. Insertar Empleado
+        # Insertar Empleado
         cursor.execute("""INSERT INTO empleado (codCreden, codCargo, codSeg, nombre, fechaIngreso) 
                           VALUES (%s, %s, %s, %s, %s)""",
                        (codCreden, codCargo, codSeg, nombre_empleado, fecha_ingreso))
         mysql.connection.commit()
-        codEmp = cursor.lastrowid  # obtener código empleado nuevo
+        codEmp = cursor.lastrowid
 
-        # 6. Insertar Nómina con salario total calculado
+        # Insertar Nómina con salario total calculado
         salario_total = bonificacion + transporte + salario
         cursor.execute("""INSERT INTO nomina (codEmp, fechaNomina, bonificacion, transporte, salario, diasTrabajados, salario_total)
                           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
@@ -312,7 +383,9 @@ def registrar_empleado():
         flash("Empleado y nómina registrados correctamente!", "success")
         return redirect(url_for('inicio'))
 
-    return render_template("auth/registrar_empleado.html", title="Registrar Nuevo Empleado")
+    return render_template("auth/registrar_empleado.html", title="Registrar Nuevo Empleado", eps_list=eps_list, pension_list=pension_list)
+
+
 
 # Ruta para obtener la nómina de un empleado específico
 @app.route('/nomina_empleado/<int:codEmp>')
@@ -370,7 +443,9 @@ def pagina_empleado():
                 fechaIngreso,
                 c.nombre AS nombre_cargo,
                 d.nombre AS nombre_dependencia,
-                s.eps, s.arl, s.pension
+                eps.nombre AS nombre_eps,
+                arl.nombre AS nombre_arl,
+                pension.nombre AS nombre_pension
             FROM 
                 usuarios u
             JOIN 
@@ -379,18 +454,24 @@ def pagina_empleado():
                 cargo c ON e.codCargo = c.codCargo
             JOIN 
                 dependencia d ON c.codDep  = d.codDep
-            JOIN
+            JOIN 
                 seguridadSocial s ON e.codSeg = s.codSeg
+            JOIN
+                eps ON s.eps_id = eps.id
+            JOIN
+                arl ON s.arl_id = arl.id
+            JOIN
+                pension ON s.pension_id = pension.id
             WHERE 
                 u.codCreden = %s
         """, [session['codCreden']])
         perfil = cursor.fetchone()
 
-        return render_template("auth/empleado.html",perfil=perfil, title="Tu Perfil de Empleado")
+        return render_template("auth/empleado.html", perfil=perfil, title="Tu Perfil de Empleado")
     return redirect(url_for('login'))
 
-# Generar PDF Nomina
 
+# Generar PDF Nomina
 @app.route('/descargar_nomina')
 def descargar_nomina():
     if 'loggedin' not in session:
@@ -472,6 +553,7 @@ def descargar_nomina():
 
     return send_file(buffer, as_attachment=True,    download_name=filename, mimetype='application/pdf')
 
+# Ruta para mostrar películas
 @app.route('/peliculas', methods=['GET'])
 def mostrar_peliculas():
     busqueda = request.args.get('busqueda', '')
@@ -517,6 +599,7 @@ def mostrar_peliculas():
         todos_anios=todos_anios
     )
 
+# Ruta para mostrar libros
 @app.route('/libros', methods=['GET'])
 def mostrar_libros():
     busqueda = request.args.get('busqueda', '')
@@ -587,12 +670,6 @@ def mostrar_libros():
         todas_editoriales=todas_editoriales,
         todos_anios=todos_anios
     )
-
-# Ruta para cerrar sesión
-@app.route('/cerrar_sesion')
-def cerrar_sesion():
-    session.clear()
-    return redirect(url_for('login'))
 
 # Ejecutar la app
 if __name__ == '__main__':
