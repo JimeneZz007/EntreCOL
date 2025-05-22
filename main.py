@@ -206,8 +206,106 @@ def editar_perfil():
         )
     return redirect(url_for('login'))
 
+# Registrar un empleado
+@app.route('/registrar_empleado', methods=['GET', 'POST'])
+def registrar_empleado():
+    if 'loggedin' not in session or session.get('role') != 'jefe':
+        flash("Acceso no autorizado", "danger")
+        return redirect(url_for('inicio'))
 
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
+    cursor.execute("SELECT id, nombre FROM eps")
+    eps_list = cursor.fetchall()
+    cursor.execute("SELECT id, nombre FROM pension")
+    pension_list = cursor.fetchall()
+
+    cursor.execute("SELECT id FROM arl WHERE nombre = %s", ("Positiva",))
+    arl_row = cursor.fetchone()
+    if not arl_row:
+        flash("La ARL 'Positiva' no está configurada en la base de datos", "danger")
+        return redirect(url_for('inicio'))
+    arl_id = arl_row['id']
+
+    if request.method == 'POST':
+        # Usuario
+        nombre_usuario = request.form['nombre_usuario']
+        contraseña = generate_password_hash(request.form['contraseña'])
+        rol = request.form['rol']
+
+        # Empleado
+        nombre_empleado = request.form['nombre_empleado']
+        fecha_ingreso = request.form['fecha_ingreso']
+        nombre_cargo = request.form['nombre_cargo']
+        nombre_dependencia = request.form['nombre_dependencia']
+
+        # Seguridad Social
+        eps_id = request.form['eps']
+        pension_id = request.form['pension']
+
+        # Verificar si ya existe esa combinación
+        cursor.execute("""SELECT codSeg FROM seguridadSocial 
+                          WHERE eps_id = %s AND arl_id = %s AND pension_id = %s""",
+                       (eps_id, arl_id, pension_id))
+        seguridad = cursor.fetchone()
+        if seguridad:
+            codSeg = seguridad['codSeg']
+        else:
+            cursor.execute("""INSERT INTO seguridadSocial (eps_id, arl_id, pension_id) 
+                              VALUES (%s, %s, %s)""", (eps_id, arl_id, pension_id))
+            mysql.connection.commit()
+            codSeg = cursor.lastrowid
+
+        # Dependencia
+        cursor.execute("SELECT codDep FROM dependencia WHERE nombre = %s", (nombre_dependencia,))
+        dependencia = cursor.fetchone()
+        if not dependencia:
+            cursor.execute("INSERT INTO dependencia (nombre) VALUES (%s)", (nombre_dependencia,))
+            mysql.connection.commit()
+            codDep = cursor.lastrowid
+        else:
+            codDep = dependencia['codDep']
+
+        # Cargo
+        cursor.execute("SELECT codCargo FROM cargo WHERE nombre = %s AND codDep = %s", (nombre_cargo, codDep))
+        cargo = cursor.fetchone()
+        if not cargo:
+            cursor.execute("INSERT INTO cargo (nombre, codDep) VALUES (%s, %s)", (nombre_cargo, codDep))
+            mysql.connection.commit()
+            codCargo = cursor.lastrowid
+        else:
+            codCargo = cargo['codCargo']
+
+        # Usuario
+        cursor.execute("INSERT INTO usuarios (nombre_usuario, contraseña, role) VALUES (%s, %s, %s)",
+                       (nombre_usuario, contraseña, rol))
+        mysql.connection.commit()
+        codCreden = cursor.lastrowid
+
+        # Empleado
+        cursor.execute("""INSERT INTO empleado (codCreden, codCargo, codSeg, nombre, fechaIngreso) 
+                          VALUES (%s, %s, %s, %s, %s)""",
+                       (codCreden, codCargo, codSeg, nombre_empleado, fecha_ingreso))
+        mysql.connection.commit()
+        codEmp = cursor.lastrowid
+
+        # Nómina
+        bonificacion = float(request.form['bonificacion'])
+        transporte = float(request.form['transporte'])
+        salario = float(request.form['salario'])
+        dias_trabajados = int(request.form['dias_trabajados'])
+        salario_total = bonificacion + transporte + salario
+        fecha_nomina = request.form['fecha_nomina']
+
+        cursor.execute("""INSERT INTO nomina (codEmp, fechaNomina, bonificacion, transporte, salario, diasTrabajados, salario_total)
+                          VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                       (codEmp, fecha_nomina, bonificacion, transporte, salario, dias_trabajados, salario_total))
+        mysql.connection.commit()
+
+        flash("Empleado y nómina registrados correctamente!", "success")
+        return redirect(url_for('inicio'))
+
+    return render_template("auth/registrar_empleado.html", title="Registrar Nuevo Empleado", eps_list=eps_list, pension_list=pension_list)
 
 # index usuarios
 @app.route('/empleado_info/<int:codEmp>')
@@ -240,7 +338,6 @@ def empleado_info(codEmp):
         return jsonify(empleado)
     else:
         return {}, 404
-
 
 # Pagina de editar empleados
 @app.route('/editar_empleado/<int:codEmp>', methods=['GET', 'POST'])
@@ -284,108 +381,31 @@ def editar_empleado(codEmp):
     flash("Acceso no autorizado", "danger")
     return redirect(url_for('inicio'))
 
-# Registrar un empleado
-@app.route('/registrar_empleado', methods=['GET', 'POST'])
-def registrar_empleado():
+# Ruta para eliminar empleado
+@app.route('/eliminar_empleado/<int:codEmp>', methods=['DELETE'])
+def eliminar_empleado(codEmp):
     if 'loggedin' not in session or session.get('role') != 'jefe':
-        flash("Acceso no autorizado", "danger")
-        return redirect(url_for('inicio'))
+        return jsonify({'message': 'Acceso no autorizado'}), 403
 
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = mysql.connection.cursor()
 
-    # Obtener EPS y Pensiones existentes en la base
-    cursor.execute("SELECT id, nombre FROM eps")  # Asegúrate que la tabla se llama 'eps' y tiene columnas id y nombre
-    eps_list = cursor.fetchall()
+    # Obtener codCreden asociado
+    cursor.execute("SELECT codCreden FROM empleado WHERE codEmp = %s", (codEmp,))
+    empleado = cursor.fetchone()
+    if not empleado:
+        return jsonify({'message': 'Empleado no encontrado'}), 404
 
-    cursor.execute("SELECT id, nombre FROM pension")
-    pension_list = cursor.fetchall()
+    codCreden = empleado[0]
 
-    # Para ARL fija "Positiva", obtener su id
-    cursor.execute("SELECT id FROM arl WHERE nombre = %s", ("Positiva",))
-    arl_row = cursor.fetchone()
-    if not arl_row:
-        flash("La ARL 'Positiva' no está configurada en la base de datos", "danger")
-        return redirect(url_for('inicio'))
-    arl_id = arl_row['id']
+    # Eliminar nómina
+    cursor.execute("DELETE FROM nomina WHERE codEmp = %s", (codEmp,))
+    # Eliminar empleado
+    cursor.execute("DELETE FROM empleado WHERE codEmp = %s", (codEmp,))
+    # Eliminar usuario
+    cursor.execute("DELETE FROM usuarios WHERE codCreden = %s", (codCreden,))
+    mysql.connection.commit()
 
-    if request.method == 'POST':
-        # Datos de usuarios
-        nombre_usuario = request.form['nombre_usuario']
-        contraseña = generate_password_hash(request.form['contraseña'])
-        rol = request.form['rol']
-
-        # Datos del empleado
-        nombre_empleado = request.form['nombre_empleado']
-        fecha_ingreso = request.form['fecha_ingreso']
-
-        # Cargo
-        nombre_cargo = request.form['nombre_cargo']
-        nombre_dependencia = request.form['nombre_dependencia']
-
-        # Seguridad Social (se elige EPS y Pensión, ARL fijo)
-        eps_id = request.form['eps']
-        pension_id = request.form['pension']
-        arl_id = arl_id  # siempre Positiva
-
-        # Nómina
-        bonificacion = float(request.form['bonificacion'])
-        transporte = float(request.form['transporte'])
-        salario = float(request.form['salario'])
-        dias_trabajados = int(request.form['dias_trabajados'])
-        fecha_nomina = request.form['fecha_nomina']  # misma que fecha_ingreso
-
-        # Insertar o encontrar Dependencia
-        cursor.execute("SELECT codDep FROM dependencia WHERE nombre = %s", (nombre_dependencia,))
-        dependencia = cursor.fetchone()
-        if not dependencia:
-            cursor.execute("INSERT INTO dependencia (nombre) VALUES (%s)", (nombre_dependencia,))
-            mysql.connection.commit()
-            codDep = cursor.lastrowid
-        else:
-            codDep = dependencia['codDep']
-
-        # Insertar o encontrar Cargo
-        cursor.execute("SELECT codCargo FROM cargo WHERE nombre = %s AND codDep = %s", (nombre_cargo, codDep))
-        cargo = cursor.fetchone()
-        if not cargo:
-            cursor.execute("INSERT INTO cargo (nombre, codDep) VALUES (%s, %s)", (nombre_cargo, codDep))
-            mysql.connection.commit()
-            codCargo = cursor.lastrowid
-        else:
-            codCargo = cargo['codCargo']
-
-        # Insertar Seguridad Social usando ids seleccionados
-        cursor.execute("INSERT INTO seguridadSocial (eps_id, arl_id, pension_id) VALUES (%s, %s, %s)",
-                       (eps_id, arl_id, pension_id))
-        mysql.connection.commit()
-        codSeg = cursor.lastrowid
-
-        # Insertar Usuario con rol seleccionado
-        cursor.execute("INSERT INTO usuarios (nombre_usuario, contraseña, role) VALUES (%s, %s, %s)",
-                       (nombre_usuario, contraseña, rol))
-        mysql.connection.commit()
-        codCreden = cursor.lastrowid
-
-        # Insertar Empleado
-        cursor.execute("""INSERT INTO empleado (codCreden, codCargo, codSeg, nombre, fechaIngreso) 
-                          VALUES (%s, %s, %s, %s, %s)""",
-                       (codCreden, codCargo, codSeg, nombre_empleado, fecha_ingreso))
-        mysql.connection.commit()
-        codEmp = cursor.lastrowid
-
-        # Insertar Nómina con salario total calculado
-        salario_total = bonificacion + transporte + salario
-        cursor.execute("""INSERT INTO nomina (codEmp, fechaNomina, bonificacion, transporte, salario, diasTrabajados, salario_total)
-                          VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                       (codEmp, fecha_nomina, bonificacion, transporte, salario, dias_trabajados, salario_total))
-        mysql.connection.commit()
-
-        flash("Empleado y nómina registrados correctamente!", "success")
-        return redirect(url_for('inicio'))
-
-    return render_template("auth/registrar_empleado.html", title="Registrar Nuevo Empleado", eps_list=eps_list, pension_list=pension_list)
-
-
+    return jsonify({'message': 'Empleado y sus datos fueron eliminados correctamente'})
 
 # Ruta para obtener la nómina de un empleado específico
 @app.route('/nomina_empleado/<int:codEmp>')
@@ -411,25 +431,6 @@ def nomina_empleado(codEmp):
         return jsonify(nominas)
     else:
         return jsonify([])  # Retorna lista vacía si no hay nómina
-    
-# Ruta para editar nómina de un empleado
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Ruta pagina Empleado
 @app.route('/pagina_empleado')

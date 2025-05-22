@@ -36,39 +36,42 @@
     <h4 class="mb-3">Datos del Cargo</h4>
     <div class="form-group mb-3">
       <label>Nombre del Cargo</label>
-      <select name="nombre_cargo" class="form-control" required>
+      <select name="nombre_cargo" id="nombre_cargo" class="form-control" required>
         <option value="">Seleccione un cargo</option>
-        <option>Ingeniero de Desarrollo</option>
-        <option>Auxiliar especializado</option>
-        <option>Director de Impuestos</option>
-        <option>Gerente de ventas</option>
-        <option>Director de Facturación</option>
-        <option>Ingeniero de Soporte</option>
-        <option>DBA</option>
-        <option>Auditor interno</option>
-        <option>Director de presupuestos</option>
-        <option>Líder de infraestructura</option>
-        <option>Director de cartera</option>
-        <option>Líder de QA</option>
-        <option>Director de costos</option>
-        <option>Director de ventas</option>
-        <option>Administrador</option>
-        <option>electrónico</option>
+        <option value="Ingeniero de Desarrollo" data-dep="Tecnología">Ingeniero de Desarrollo</option>
+        <option value="Auxiliar especializado" data-dep="Contabilidad">Auxiliar especializado</option>
+        <option value="Director de Impuestos" data-dep="Contabilidad">Director de Impuestos</option>
+        <option value="Gerente de ventas" data-dep="Comercial">Gerente de ventas</option>
+        <option value="Director de Facturación" data-dep="Facturación">Director de Facturación</option>
+        <option value="Ingeniero de Soporte" data-dep="Tecnología">Ingeniero de Soporte</option>
+        <option value="DBA" data-dep="Tecnología">DBA</option>
+        <option value="Auditor interno" data-dep="Contabilidad">Auditor interno</option>
+        <option value="Director de presupuestos" data-dep="Contabilidad">Director de presupuestos</option>
+        <option value="Líder de infraestructura" data-dep="Tecnología">Líder de infraestructura</option>
+        <option value="Director de cartera" data-dep="Facturación">Director de cartera</option>
+        <option value="Líder de QA" data-dep="Tecnología">Líder de QA</option>
+        <option value="Director de costos" data-dep="Contabilidad">Director de costos</option>
+        <option value="Director de ventas" data-dep="Comercial">Director de ventas</option>
+        <option value="Administrador" data-dep="Gerencia">Administrador</option>
+        <option value="electrónico" data-dep="Tecnología">electrónico</option>
       </select>
     </div>
     <div class="form-group mb-4">
       <label>Dependencia</label>
-      <select name="nombre_dependencia" class="form-control" required>
-        <option value="">Seleccione una dependencia</option>
-        <option>Tecnología</option>
-        <option>Facturación</option>
-        <option>Contabilidad</option>
-        <option>Comercial</option>
-        <option>Gerencia</option>
-      </select>
+      <input type="text" name="nombre_dependencia" id="nombre_dependencia" class="form-control" readonly required>
     </div>
 
-    <!-- Datos de Seguridad Social -->
+    <!-- Seguridad Social -->
+    <h4 class="mb-3">Seguridad Social</h4>
+
+    <div class="mb-3">
+      <label for="arl" class="form-label">ARL</label>
+      <select id="arl" class="form-control" disabled>
+        <option value="Positiva" selected>Positiva</option>
+      </select>
+      <input type="hidden" name="arl" value="Positiva">
+    </div>
+
     <div class="mb-3">
       <label for="eps" class="form-label">EPS</label>
       <select name="eps" id="eps" class="form-select" required>
@@ -89,14 +92,6 @@
       </select>
     </div>
 
-    <div class="mb-3">
-      <label for="arl" class="form-label">ARL</label>
-      <select id="arl" class="form-control" disabled>
-        <option value="Positiva" selected>Positiva</option>
-      </select>
-      <input type="hidden" name="arl" value="Positiva">
-    </div>
-
     <!-- Datos de Nómina -->
     <h4 class="mb-3">Datos de Nómina</h4>
     <div class="form-group mb-3">
@@ -113,48 +108,47 @@
     </div>
     <div class="form-group mb-3">
       <label>Días Trabajados</label>
-      <input type="number" min="0" max="31" name="dias_trabajados" id="dias_trabajados" class="form-control" required value="0">
+      <input type="number" min="0" max="20" name="dias_trabajados" id="dias_trabajados" class="form-control" required value="0">
     </div>
     <div class="form-group mb-4">
       <label>Salario Total</label>
       <input type="number" step="0.01" min="0" id="salario_total" class="form-control" readonly>
     </div>
 
-    <!-- Campo oculto para enviar la fecha de nómina igual a la fecha de ingreso -->
     <input type="hidden" name="fecha_nomina" id="fecha_nomina">
-
     <button type="submit" class="btn btn-primary">Registrar Empleado</button>
   </form>
 </div>
 
 <script>
-  // Función para actualizar salario total automáticamente
   function actualizarSalarioTotal() {
     const bonificacion = parseFloat(document.getElementById('bonificacion').value) || 0;
     const transporte = parseFloat(document.getElementById('transporte').value) || 0;
     const salario = parseFloat(document.getElementById('salario').value) || 0;
-
     const total = bonificacion + transporte + salario;
     document.getElementById('salario_total').value = total.toFixed(2);
   }
 
-  // Vincular los inputs para que actualicen el total al cambiar
   document.getElementById('bonificacion').addEventListener('input', actualizarSalarioTotal);
   document.getElementById('transporte').addEventListener('input', actualizarSalarioTotal);
   document.getElementById('salario').addEventListener('input', actualizarSalarioTotal);
 
-  // Actualizar el campo fecha_nomina al cambiar la fecha de ingreso
   document.getElementById('fecha_ingreso').addEventListener('change', function() {
     document.getElementById('fecha_nomina').value = this.value;
   });
 
-  // Al cargar la página, inicializar fecha_nomina con fecha_ingreso si ya tiene valor
+  document.getElementById('nombre_cargo').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const dependencia = selectedOption.getAttribute('data-dep') || '';
+    document.getElementById('nombre_dependencia').value = dependencia;
+  });
+
   window.addEventListener('DOMContentLoaded', () => {
+    actualizarSalarioTotal();
     const fechaIngresoInput = document.getElementById('fecha_ingreso');
-    if(fechaIngresoInput.value) {
+    if (fechaIngresoInput.value) {
       document.getElementById('fecha_nomina').value = fechaIngresoInput.value;
     }
-    actualizarSalarioTotal();
   });
 </script>
 {% endblock %}

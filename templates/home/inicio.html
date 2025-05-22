@@ -54,28 +54,23 @@
   </div>
 
   <script>
-    const empleadoSelect = document.getElementById('empleadoSelect');
-    const infoCont = document.getElementById('infoEmpleado');
-    const nominaCont = document.getElementById('nominaEmpleado');
-    const nominaBody = document.getElementById('nominaBody');
-
-    empleadoSelect.addEventListener('change', function () {
+    document.getElementById('empleadoSelect').addEventListener('change', function () {
       const codEmp = this.value;
+      const infoCont = document.getElementById('infoEmpleado');
+      const nominaCont = document.getElementById('nominaEmpleado');
+      const nominaBody = document.getElementById('nominaBody');
 
       if (!codEmp) {
         infoCont.style.display = 'none';
-        infoCont.innerHTML = '';
         nominaCont.style.display = 'none';
+        infoCont.innerHTML = '';
         nominaBody.innerHTML = '';
         return;
       }
 
       // Obtener datos empleado
       fetch(`/empleado_info/${codEmp}`)
-        .then(response => {
-          if (!response.ok) throw new Error('Empleado no encontrado');
-          return response.json();
-        })
+        .then(response => response.ok ? response.json() : Promise.reject('Empleado no encontrado'))
         .then(data => {
           infoCont.style.display = 'block';
           infoCont.innerHTML = `
@@ -88,50 +83,53 @@
             <p><strong>Pensión:</strong> ${data.pension}</p>
             <p><strong>ARL:</strong> ${data.arl}</p>
             <p><strong>Fecha de Ingreso:</strong> ${data.fechaIngreso}</p>
-            <a href="/editar_empleado/${data.codEmp}" class="btn btn-primary mt-3">Editar Empleado</a>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+            <a href="/editar_empleado/${data.codEmp}" class="btn btn-primary">Editar Empleado</a>
+            <button onclick="eliminarEmpleado(${data.codEmp})" class="btn btn-danger">Eliminar Empleado</button>
+            </div>
           `;
         })
         .catch(error => {
           infoCont.style.display = 'block';
-          infoCont.innerHTML = `<p class="text-danger">${error.message}</p>`;
+          infoCont.innerHTML = `<p class="text-danger">${error}</p>`;
         });
 
       // Obtener datos nómina
       fetch(`/nomina_empleado/${codEmp}`)
-        .then(response => {
-          if (!response.ok) throw new Error('Nómina no encontrada');
-          return response.json();
-        })
+        .then(response => response.ok ? response.json() : Promise.reject('Nómina no encontrada'))
         .then(data => {
+
           nominaCont.style.display = 'block';
-          nominaBody.innerHTML = '';
-
-          if (data.length === 0) {
-            nominaBody.innerHTML = `<tr><td colspan="8" class="text-center">No hay datos de nómina para este empleado.</td></tr>`;
-            return;
-          }
-
-          data.forEach(nomina => {
-            nominaBody.innerHTML += `
-              <tr>
-                <td>${nomina.codEmp}</td>
-                <td>${nomina.nombre}</td>
-                <td>${nomina.fechaNomina}</td>
-                <td>${nomina.bonificacion}</td>
-                <td>${nomina.transporte}</td>
-                <td>${nomina.salario}</td>
-                <td>${nomina.diasTrabajados}</td>
-                <td>${nomina.salario_total}</td>
-
-              </tr>
-            `;
-          });
+          nominaBody.innerHTML = data.length ? data.map(nomina => `
+            <tr>
+              <td>${nomina.codEmp}</td>
+              <td>${nomina.nombre}</td>
+              <td>${nomina.fechaNomina}</td>
+              <td>${nomina.bonificacion}</td>
+              <td>${nomina.transporte}</td>
+              <td>${nomina.salario}</td>
+              <td>${nomina.diasTrabajados}</td>
+              <td>${nomina.salario_total}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="8" class="text-center">No hay datos de nómina para este empleado.</td></tr>`;
         })
         .catch(error => {
           nominaCont.style.display = 'block';
-          nominaBody.innerHTML = `<tr><td colspan="8" class="text-danger">${error.message}</td></tr>`;
+          nominaBody.innerHTML = `<tr><td colspan="8" class="text-danger">${error}</td></tr>`;
         });
     });
+
+    function eliminarEmpleado(codEmp) {
+      if (!confirm("¿Estás seguro de que deseas eliminar este empleado y toda su información?")) return;
+
+      fetch(`/eliminar_empleado/${codEmp}`, { method: 'DELETE' })
+        .then(response => response.ok ? response.json() : Promise.reject("Error al eliminar el empleado"))
+        .then(data => {
+          alert(data.message);
+          location.reload();
+        })
+        .catch(error => alert("Error: " + error));
+    }
   </script>
 </div>
 {% endblock %}
