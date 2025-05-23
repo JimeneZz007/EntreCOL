@@ -432,21 +432,24 @@ def nomina_empleado(codEmp):
     else:
         return jsonify([])  # Retorna lista vacía si no hay nómina
 
-# Ruta pagina Empleado
-@app.route('/pagina_empleado')
+
+@app.route('/pagina_empleado',methods=['GET', 'POST'])
 def pagina_empleado():
     if 'loggedin' in session and session['role'] != 'jefe':
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+        # Consulta de datos del perfil del empleado
         cursor.execute("""
             SELECT 
                 u.nombre_usuario, u.role,
+                e.codEmp,  -- AÑADIDO: necesario para filtrar en 'novedades'
                 e.nombre AS nombre_empleado,
                 fechaIngreso,
                 c.nombre AS nombre_cargo,
                 d.nombre AS nombre_dependencia,
-                eps.nombre AS nombre_eps,
-                arl.nombre AS nombre_arl,
-                pension.nombre AS nombre_pension
+                eps.nombre AS eps,
+                arl.nombre AS arl,
+                pension.nombre AS pension
             FROM 
                 usuarios u
             JOIN 
@@ -454,24 +457,65 @@ def pagina_empleado():
             JOIN 
                 cargo c ON e.codCargo = c.codCargo
             JOIN 
-                dependencia d ON c.codDep  = d.codDep
+                dependencia d ON c.codDep = d.codDep
             JOIN 
                 seguridadSocial s ON e.codSeg = s.codSeg
-            JOIN
+            JOIN 
                 eps ON s.eps_id = eps.id
-            JOIN
+            JOIN 
                 arl ON s.arl_id = arl.id
-            JOIN
+            JOIN 
                 pension ON s.pension_id = pension.id
             WHERE 
                 u.codCreden = %s
         """, [session['codCreden']])
         perfil = cursor.fetchone()
 
-        return render_template("auth/empleado.html", perfil=perfil, title="Tu Perfil de Empleado")
+        # Consulta de las últimas 5 nóminas del empleado
+        cursor.execute("""
+            SELECT 
+                n.fechaNomina,
+                n.diasTrabajados,
+                n.bonificacion,
+                n.transporte,
+                n.salario,
+                n.salario_total
+            FROM 
+                nomina n
+            JOIN 
+                empleado e ON n.codEmp = e.codEmp
+            WHERE 
+                e.codCreden = %s
+            ORDER BY 
+                n.fechaNomina DESC
+            LIMIT 5
+        """, [session['codCreden']])
+        nominas_recientes = cursor.fetchall()
+
+        # Consulta dinámica de novedades
+        novedades = []
+        tipo_consulta = None
+        if request.method == 'POST':
+            tipo_consulta = request.form['tipo_novedad']
+            cursor.execute("""
+                SELECT fechaNomina, fechaini, fechaFin
+                FROM novedades n
+                JOIN empleado e ON n.codEmp = e.codEmp
+                WHERE e.codCreden = %s AND tipo = %s
+                ORDER BY fechaNomina DESC
+            """, [session['codCreden'], tipo_consulta])
+            novedades = cursor.fetchall()
+
+        return render_template(
+            "auth/empleado.html",
+            perfil=perfil,
+            nominas=nominas_recientes,
+            novedades=novedades,
+            tipo_consulta=tipo_consulta,
+            title="Tu Perfil de Empleado"
+        )
+
     return redirect(url_for('login'))
-
-
 # Generar PDF Nomina
 @app.route('/descargar_nomina')
 def descargar_nomina():

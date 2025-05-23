@@ -40,17 +40,17 @@
 
       <div class="mb-3">
         <h5 class="mb-1">EPS:</h5>
-        <p class="fs-5 text-muted">{{ perfil['nombre_eps'] }}</p>
+        <p class="fs-5 text-muted">{{ perfil['eps'] }}</p>
       </div>
 
       <div class="mb-3">
         <h5 class="mb-1">ARL:</h5>
-        <p class="fs-5 text-muted">{{ perfil['nombre_arl'] }}</p>
+        <p class="fs-5 text-muted">{{ perfil['arl'] }}</p>
       </div>
 
       <div class="mb-3">
         <h5 class="mb-1">Pensión:</h5>
-        <p class="fs-5 text-muted">{{ perfil['nombre_pension'] }}</p>
+        <p class="fs-5 text-muted">{{ perfil['pension'] }}</p>
       </div>
 
       <div class="mb-3">
@@ -66,6 +66,53 @@
       <div class="mb-3">
         <h5 class="mb-1">Dependencia:</h5>
         <p class="fs-5 text-muted">{{ perfil['nombre_dependencia'] }}</p>
+      </div>
+
+      <!-- NUEVO: Consultar novedades -->
+      <div class="mt-5">
+        <h4 class="mb-3">Consultar Vacaciones / Incapacidades</h4>
+
+        <form method="POST" action="{{ url_for('pagina_empleado') }}" class="row g-3">
+          <div class="col-md-6">
+            <label for="tipoNovedad" class="form-label">Tipo de novedad</label>
+            <select id="tipoNovedad" name="tipo_novedad" class="form-select" required>
+              <option value="" disabled selected>Seleccione una opción</option>
+              <option value="vacaciones">Vacaciones</option>
+              <option value="incapacidad">Incapacidad</option>
+            </select>
+          </div>
+          <div class="col-md-3 align-self-end">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+          </div>
+        </form>
+
+        {% if novedades %}
+          <div class="mt-4">
+            <h5>Resultados encontrados: {{ novedades|length }}</h5>
+            <table class="table table-bordered mt-2">
+              <thead class="table-dark">
+                <tr>
+                  <th>Fecha Inicio</th>
+                  <th>Fecha Fin</th>
+                  <th>Fecha de Nómina</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for novedad in novedades %}
+                <tr>
+                  <td>{{ novedad['fechaini'] }}</td>
+                  <td>{{ novedad['fechaFin'] }}</td>
+                  <td>{{ novedad['fechaNomina'] }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% elif tipo_consulta %}
+          <div class="mt-4 alert alert-warning">
+            No se encontraron registros de {{ tipo_consulta }}.
+          </div>
+        {% endif %}
       </div>
 
       <!-- Botones -->
