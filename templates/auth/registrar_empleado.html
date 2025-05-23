@@ -114,9 +114,12 @@
       <label>Salario Total</label>
       <input type="number" step="0.01" min="0" id="salario_total" class="form-control" readonly>
     </div>
-
     <input type="hidden" name="fecha_nomina" id="fecha_nomina">
-    <button type="submit" class="btn btn-primary">Registrar Empleado</button>
+
+    <div class="d-flex gap-3">
+      <button type="submit" class="btn btn-warning">Registrar Empleado</button>
+      <a href="{{ url_for('inicio') }}" class="btn btn-primary">Volver al Inicio</a>
+    </div>
   </form>
 </div>
 
